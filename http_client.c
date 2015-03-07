@@ -98,7 +98,7 @@ char *separate_CRLF(char *string)
 
 	if(!p1 && !p2) return NULL;
 
-	/* Switch "p1" and "p2", so that "p1" would be closed to the beginning
+	/* Switch "p1" and "p2", so that "p1" would be closer to the beginning
 		of the string (and so that "p1" wouldn't be NULL).
 		"p2" can be NULL */
 	if(!p1)
