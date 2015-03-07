@@ -25,11 +25,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-const unsigned request_timeout = 60; // в секундах
+const unsigned request_timeout = 60; // in seconds
 const unsigned max_redirects = 7;
 const char *appname = "http_client";
 const char *appversion = "0.1";
-#define MAX_HTTP_HEADERS_LENGTH 4096 // максимальная общая длина всех HTTP-заголовков
+#define MAX_HTTP_HEADERS_LENGTH 4096 // maximum sum length of all HTTP headers
 #define MAX_HTTP_HEADERS_COUNT 100
 
 struct http_header {
@@ -58,7 +58,13 @@ int compare_headers_cb(const void *a, const void *b)
 	);
 }
 
-char *find_header(struct http_header *HEADERS, int HEADERS_count, char *header_name_normalized) // header_name_normalized должно быть полностью в lowercase
+
+char *find_header(
+	struct http_header *HEADERS,
+	int HEADERS_count,
+
+	// "header_name_normalized" must be completely in lowercase
+	char *header_name_normalized)
 {
 	struct http_header query;
 	query.key = header_name_normalized;
@@ -78,10 +84,11 @@ void timeout_handler(int unused)
 }
 
 /* separate_CRLF
-	- обнаруживает в строке string перевод строки \n, либо \r, либо их комбинацию (\r\n или \n\r),
-	- заменяет первый из этих попавшихся символов на \0
-	- возвращает указатель на первый байт после CRLF.
-	- возвращает NULL, если ни \r, ни \n в строке нет.
+	- looks at "string" and detects "\n", "\r" or
+		their combination ("\r\n" or "\n\r")
+	- replaces first of those detected symbols with \0
+	- returns the pointer to the first byte after CRLF
+	- returns NULL if neither \r nor \n were found
 */
 char *separate_CRLF(char *string)
 {
@@ -91,7 +98,9 @@ char *separate_CRLF(char *string)
 
 	if(!p1 && !p2) return NULL;
 
-	/* Поменяем p1 и p2 местами так, чтобы p1 находился ближе к началу строки (и не был равен NULL). p2 может быть NULL */
+	/* Switch "p1" and "p2", so that "p1" would be closed to the beginning
+		of the string (and so that "p1" wouldn't be NULL).
+		"p2" can be NULL */
 	if(!p1)
 	{
 		p1 = p2;
@@ -104,18 +113,21 @@ char *separate_CRLF(char *string)
 		p2 = t;
 	}
 
-	*p1 = '\0'; // откусываем конец строки (её начало - begin)
+	*p1 = '\0'; // mark the end of the string
 
 	p1 ++;
-	if(p1 == p2) // если за \r сразу идёт \n (или наоборот), то игнорируем второй символ
+	if(p1 == p2) // if \r is followed by \n (or vice verse), then ignore the second symbol
 		p1 ++;
 
 	return p1;
 }
 
-/* Если string начинается с CRLF, то возвращает указатель на следующее за ним. Иначе возвращает string.
-	Отбрасывается не более одного CRLF (т.к. следующее за ним может быть бинарными данными)
+/* If "string" starts with CRLF, returns a pointer to whatever is after CRLF.
+	Otherwise returns "string".
+	No more than one CRLF is skipped (because CRLF can be followed
+	by binary data).
 */
+
 char *strip_first_CRLF(char *string)
 {
 	if(*string == '\r')
@@ -132,10 +144,11 @@ char *strip_first_CRLF(char *string)
 }
 
 /*
-	Метод для упрощения чтения тела ответа.
-	По семантике похож на sendfile, но in_fd может быть сокетом.
+	Helper method to read the response body.
+	Unlike in the usual sendfile(), "in_fd" here can be a socket.
 
-	Возвращает количество НЕДОЧИТАННЫХ байт (т.е. 0, если count байт прочитаны целиком).
+	Return the number of NOT YET READ bytes (i.e. 0 if "count" bytes
+	have been read completely).
 */
 size_t sendfile_from_socket(int out_fd, int in_fd, size_t count)
 {
@@ -178,8 +191,8 @@ void perform_http_request(char *URL)
 
 	memset(&HEADERS, 0, sizeof(HEADERS));
 
-	int i, j; // временные переменные для циклов
-	char *p; // используется как временная переменная во время парсинга URL
+	int i, j; // temporary variables for loops
+	char *p; // temporary pointer used when parsing URLs
 	char *begin = URL;
 
 	p = strchr(begin, ':');
@@ -216,41 +229,43 @@ bad_schema:
 	}
 
 
-	begin = p; // begin указывает на начало "example.com/some/path"
-	p = strchr(begin, '/'); // отцепляем хост
+	begin = p; // "being" points to the beginning of "example.com/some/path"
+	p = strchr(begin, '/'); // separate the host
 	*p = '\0';
 
-	char *host = begin; // указывает на "example.com" или "example.com:1234"
-	char *path = p + 1; // указывает на "/some/path"
+	char *host = begin; // points to "example.com" or "example.com:1234"
+	char *path = p + 1; // points to "/some/path"
 
-	// Переводим номер порта из текста в число
+	// Convert the port from string to integer
 	p = strchr(host, ':');
 	const char *port;
 	if(p)
 	{
 		port = p + 1;
-		*p = '\0'; // порт откусывается от строки host
+		*p = '\0'; // port is separated from the "host" string
 	}
 	else port = "80";
 
-	/* Превращаем хост в IP-адрес (если там уже сейчас не IP-адрес) */
+	/* Convert "host" into IP address (unless it is already an address) */
 
 	struct addrinfo hints;
 	struct addrinfo *ai;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC; /* устроит и IPv4, и IPv6 */
+	hints.ai_family = AF_UNSPEC; /* Both IPv4 and IPv6 are acceptable */
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = 0;
 	hints.ai_protocol = 0;
 
-	int ret = getaddrinfo(host, port, &hints, &ai); // ai - односвязный список адресов, но все нам не нужны, возьмём первый
+	int ret = getaddrinfo(host, port, &hints, &ai);
 	if(ret != 0)
 	{
 		fprintf(stderr, "[error] Bad hostname or address: \"%s\": %s\n", host, gai_strerror(ret));
 		exit(1);
 	}
 
+	// "ai" is a linked list, but we don't need all results,
+	// we can just use the first
 	int sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 	if(sock < 0)
 	{
@@ -258,11 +273,11 @@ bad_schema:
 		exit(1);
 	}
 
-	/* Отслеживаем таймаут */
+	/* Timeout control */
 	signal(SIGALRM, timeout_handler);
 	alarm(request_timeout);
 
-	/* Хотим отследить, сколько времени занимал каждый этап */
+	/* Debug code: how much time does each step take? */
 	struct timeval start;
 	gettimeofday(&start, NULL);
 
@@ -305,33 +320,46 @@ bad_schema:
 	fprintf(stderr, "[info] Request sent OK.\n");
 	SPENT();
 
-	/* Читаем ответ. Здесь нужно перевести сокет в неблокирующий режим, т.к. когда мы читаем заголовки, мы можем попытаться
-		прочитать больше, чем есть в ответе, если сам ответ мал (меньше максимальной длины заголовка). Что привело бы к таймауту */
+	/* Read the reply. Here we must put the socket into non-blocking mode,
+		because when we're reading headers, we can try to read more
+		than exists in the response, if the response is small enough
+		(less than MAX_HTTP_HEADERS_LENGTH). Which would cause timeout.
+	*/
 	if(fcntl(sock, F_SETFL, O_NONBLOCK) < 0)
 	{
 		fprintf(stderr, "[error] fcntl() failed: %s\n", strerror(errno));
 		exit(1);
 	}
 
-	char buffer[MAX_HTTP_HEADERS_LENGTH + 1]; // Будем читать до перевода строки, далее парсить простыми strchr
+	// We'll read into buffer[] until the first newline,
+	// then parse with simple strchr()-s
+	char buffer[MAX_HTTP_HEADERS_LENGTH + 1];
 	int lineno = 0;
-	int header_idx = 0; // номер http-заголовка, который мы читаем прямо сейчас, в массиве HEADERS[]
+
+	// index of HTTP header we're currently reading in the HEADERS[] array
+	int header_idx = 0;
 
 	struct pollfd fds;
 	fds.fd = sock;
 	fds.events = POLLIN;
 
-	char *line = buffer; // Начало текущей строки (внутри buffer).
-	char *buffer_offset = buffer; // указатель на первый байт массива buffer, куда мы читаем следующим вызовом read. Сдвигается с каждым read
+	char *line = buffer; // Start of the current string (inside "buffer").
 
-	unsigned short code; // код ответа
-	int prefetched_body_length; // количество байт тела HTTP-ответа, зачитанных в буфер на этапе чтения HTTP-заголовков (указатель line будет ссылаться на первый байт этих данных)
+	// Pointer to the byte in "buffer", into which we're going to read with
+	// the next read() call. Changes with each read().
+	char *buffer_offset = buffer;
 
+	unsigned short code; // HTTP response code
+
+	// Number of bytes of HTTP response body which we read prematurely
+	// (while reading HTTP headers). "line" pointer will point
+	// to the first byte of this data.
+	int prefetched_body_length;
 	char *p1;
 
 	while(1)
 	{
-		if(poll(&fds, 1, -1) < 0) // таймаут к poll не нужен, у нас и так установлен alarm
+		if(poll(&fds, 1, -1) < 0) // no timeout needed, we did alarm()
 		{
 			fprintf(stderr, "[error] poll() failed: %s\n", strerror(errno));
 			exit(1);
@@ -347,7 +375,8 @@ bad_schema:
 		if(bytes_received == 0) continue;
 
 
-#if 0 /* Код для отладки. Здесь можно подменить HTTP-ответ на любой текст и проверить, как он парсится */
+#if 0 /* Debugging code. Here you can replace HTTP response with any text
+	and check how it is parsed */
 
 #warning "Debug code: real response substituted"
 		bytes_received = snprintf(buffer, MAX_HTTP_HEADERS_LENGTH, "HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\nSome-Header: text123\n appendix to text123\nContent-Length: 112\nTransfer-Encoding: chunked\nTransfer-Encoding: something-else\nTransfer-Encoding: yet-another-line\nX-another: first line\nX-another: and yet another line\n\nINTERESTING CONTENT");
@@ -358,24 +387,31 @@ bad_schema:
 		char *new_offset = buffer_offset + bytes_received;
 		*new_offset = '\0';
 
-		// 1) В том, что уже было внутри buffer (ещё до вызова read), точно нет перевода строки. Ищем с buffer_offset.
-		// 2) Перевод строки: стандарт допускает и \r, и \n, так и их комбинацию. Проверяем всё при помощи separate_CRLF.
+		// 1) There're no newlines in whatever was in buffer[] before
+		// read() call, so we search from buffer_offset.
+		// 2) Line break can be \r, \n or their combination, so we
+		// check everything with separate_CRLF().
 
 check_buffer_for_newlines:
-		p1 = separate_CRLF(buffer_offset); /* указывает на начало следующей строки */
-		if(!p1) // перевода строки нет
+		p1 = separate_CRLF(buffer_offset); /* points to the next line */
+		if(!p1) // no line breaks found
 		{
-			if(bytes_received == space_left_in_buffer) // сервер, по-видимому, неисправен: прислал уже уйму всего, а HTTP-заголовки всё не заканчиваются
+			if(bytes_received == space_left_in_buffer)
 			{
+				// Server is doing something wrong:
+				// it sent a lot of stuff already,
+				// but HTTP headers still haven't ended yet
+
 				fprintf(stderr, "[error] HTTP response headers returned by server are too long (> %i bytes). Aborting (just in case).\n", MAX_HTTP_HEADERS_LENGTH);
 				exit(1);
 			}
 
+			// return to poll(), server should sent the remainder of this string
 			buffer_offset = new_offset;
-			continue; // возвращаемся к poll и ждём, пока сервер пришлёт оставшуюся часть этой строки
+			continue;
 		}
 
-		/* обрабатываем строку */
+		/* Handle the line */
 		fprintf(stderr, "[debug] Received line: \"%s\"\n", line);
 		if(lineno == 0)
 		{
@@ -383,7 +419,7 @@ check_buffer_for_newlines:
 			char status[256];
 			sscanf(line, "%9s %i %255s", proto, &code, status);
 
-			/* Отловим "неподходящие" коды ответа */
+			/* Catch the "wrong" status codes */
 			if(code >= 400)
 			{
 				fprintf(stderr, "[error] Server returned HTTP error %i: %s\n", code, status);
@@ -411,26 +447,29 @@ check_buffer_for_newlines:
 		{
 			if(line[0] == '\0')
 			{
-				// Начало тела документа.
-				// Важно: часть тела уже прочитана и находится по адресу line + 1.
+				// Start of the response body.
+				// NOTE: part of the body has already been read
+				// and is saved at (line+1).
 				fprintf(stderr, "[info] All HTTP response headers have been received\n");
 				line ++;
 
-				/* Отбрасываем перевод строки (только один, т.к. тело ответа может быть бинарными данными) */
+				/* Strip one newline (no more than one, as response body can have binary data) */
 				line = strip_first_CRLF(line);
 
 				prefetched_body_length = new_offset - line;
 				goto read_response_body;
 			}
 
-			if(line[0] == ' ' || line[0] == '\t') /* если строка начинается с пробела/табуляции, то это продолжение предыдущего HTTP-заголовка */
+			// If the string starts with space or tabulation, then
+			// it is a continuation of the previous HTTP header.
+			if(line[0] == ' ' || line[0] == '\t')
 			{
 				do
 				{
-					line ++; // Пропускаем все пробелы/табуляции
+					line ++; // Skip all spaces/tabs
 				}
 				while(*line == ' ' || *line == '\t');
-				line --; // Оставить один пробел
+				line --; // Leave one space
 
 				if(!HEADERS[header_idx].val)
 				{
@@ -444,10 +483,13 @@ check_buffer_for_newlines:
 				int applen = strlen(line);
 
 				//fprintf(stderr, "[debug] Appending \"%p\" to \"%p\" (diff %i) (len %i) header.\n", line, HEADERS[header_idx].val, line - HEADERS[header_idx].val, len);
-				memmove(HEADERS[header_idx].val + oldlen, line, applen); // Места заведомо хватает: переносится на места, где раньше были переводы строки + тот же текст
+
+				// We do have enough space for memmove(): we're copying
+				// to the area which contained the very same text (plus newlines).
+				memmove(HEADERS[header_idx].val + oldlen, line, applen);
 				HEADERS[header_idx].val[oldlen + applen] = '\0';
 			}
-			else // Новый HTTP-заголовок ответа
+			else // New HTTP header found
 			{
 				char *val = strchr(line, ':');
 				if(!val)
@@ -459,7 +501,7 @@ check_buffer_for_newlines:
 				*val = '\0';
 				val ++;
 
-				// убираем пробелы после двоеточия
+				// Remove the spaces after ':'
 				while(isspace(*val))
 					val ++;
 
@@ -470,9 +512,10 @@ check_buffer_for_newlines:
 				HEADERS[header_idx].key = line;
 				HEADERS[header_idx].val = val;
 
+				// Normalize header names (they are case-insensitive)
 				char *ptr;
 				for(ptr = HEADERS[header_idx].key; *ptr != '\0'; ptr ++)
-					*ptr = tolower(*ptr); // нормализация (названия заголовков - case-insensitive)
+					*ptr = tolower(*ptr);
 			}
 		}
 
@@ -480,22 +523,22 @@ check_buffer_for_newlines:
 		buffer_offset = p1;
 		lineno ++;
 
-		// Прочёл ли последний read более одной строки? Надо проверить.
+		// We need to check if the last read() got more than one line.
 		goto check_buffer_for_newlines;
 	}
 
 read_response_body:
-	/* Изучим HTTP-заголовки ответа */
+	/* Let's study the HTTP response headers */
 	HEADERS_count = header_idx;
 	if(HEADERS[header_idx].val)
 		HEADERS_count ++;
 
 	SPENT();
 
-	/* Сперва разберёмся с массивом HEADERS, дабы в нём было проще искать */
+	/* Sort the HEADERS[] array for faster search */
 	qsort(HEADERS, HEADERS_count, sizeof(HEADERS[0]), compare_headers_cb);
 
-	/* Уберём дубликаты (значения дублирующих заголовков склеиваются через запятую) */
+	/* Merge duplicate headers (their values are joined using commas) */
 	for(i = 0; i < HEADERS_count - 1; i ++)
 	{
 test_another_dup:
@@ -506,7 +549,7 @@ test_another_dup:
 			char *newval;
 			if(HEADERS[i].val_must_be_freed)
 			{
-				newval = realloc(HEADERS[i].val, oldlen + strlen(HEADERS[i + 1].val) + 3 /* 3 байта = запятая + пробел + нулевой байт */);
+				newval = realloc(HEADERS[i].val, oldlen + strlen(HEADERS[i + 1].val) + 3 /* 3 bytes = comma + space + zero byte */);
 				if(!newval)
 				{
 					fprintf(stderr, "[error] realloc: memory allocation failed\n");
@@ -529,7 +572,7 @@ test_another_dup:
 			}
 			HEADERS[i].val = newval;
 
-			/* Сдвигаем оставшиеся элементы HEADER[] к началу массива */
+			/* Move the remaining elements of HEADERS[] to the beginning of the array */
 			HEADERS_count --;
 			for(j = i + 1; j < HEADERS_count; j ++)
 				HEADERS[j] = HEADERS[j + 1];
@@ -545,8 +588,8 @@ test_another_dup:
 		fprintf(stderr, "[debug] Header[%i] '%s' is '%s'.\n", i, HEADERS[i].key, HEADERS[i].val);
 	}
 
-	/* Отлично, с заголовками разобрались. А не редирект ли это? */
-	if(code >= 300) /* коды >= 400 уже были отфильтрованы ранее */
+	/* OK, we've parsed the headers. Is it a redirect? */
+	if(code >= 300) /* codes >= 400 have already been filtered before */
 	{
 		char *location = find_header(HEADERS, HEADERS_count, "location");
 
@@ -569,11 +612,16 @@ test_another_dup:
 		perform_http_request(location);
 		free(location);
 
-		return; /* Готово. */
+		return; /* Done. */
 	}
 
-	/* Нам не надо разбираться во всех полях. Достаточно Transfer-Encoding и Content-Length.
-		Заголовка Content-Encoding тут не может быть, т.к. мы не посылали Accept-Encoding. Но на случай битых серверов проверим.
+	/*
+		We don't need to support all headers.
+		Transfer-Encoding and Content-Length are enough.
+
+		Content-Encoding header can't be here because
+		we never sent Accept-Encoding. But we'll check
+		in case the server is misbehaving.
 	*/
 	if(find_header(HEADERS, HEADERS_count, "content-encoding"))
 	{
@@ -583,11 +631,11 @@ test_another_dup:
 
 	unsigned long len = 0;
 	int is_chunked = 0;
-	int no_length = 0; // 1, если нет ни Transfer-Encoding: chunked, ни Content-Length
+	int no_length = 0; // 1 if there is neither "Transfer-Encoding: chunked" nor "Content-Length"
 
 	char *transfer_encoding = find_header(HEADERS, HEADERS_count, "transfer-encoding");
 	char *content_length = find_header(HEADERS, HEADERS_count, "content-length");
-	if(!transfer_encoding) /* Если бы Transfer-Encoding был, мы были бы обязаны проигнорировать Content-Length */
+	if(!transfer_encoding) /* When Transfer-Encoding exists, we must ignore Content-Length */
 	{
 		if(content_length)
 		{
@@ -605,12 +653,12 @@ test_another_dup:
 			fprintf(stderr, "[warn] Server has responded without both Content-Length and Transfer-Encoding headers.\n");
 
 			no_length = 1;
-			len = (unsigned long) -1; // = очень много
+			len = (unsigned long) -1; // = very-very long
 		}
 	}
 	else
 	{
-		/* Согласно стандарту HTTP/1.1, клиент обязан поддерживать chunked */
+		/* Per HTTP/1.1, the client must support chunked */
 		const char chunked[] = "chunked";
 
 		if(content_length)
@@ -622,14 +670,17 @@ test_another_dup:
 			fprintf(stderr, "[info] Server is using chunked transfer-encoding\n");
 			is_chunked = 1;
 
-			/* Нет ли там ещё каких-нибудь Transfer-Encoding, которых мы не поддерживаем? */
+			/* Is there something else in the Transfer-Encoding?
+				We only support chunked. */
 			memset(p, ' ', sizeof(chunked) - 1);
 
 			char *q;
 			for(q = transfer_encoding; *q != '\0'; q ++)
 				if(!isspace(*q) && *q != ',')
 				{
-					memcpy(p, chunked, sizeof(chunked) - 1); // Только для более корректного сообщения об ошибке
+					// Restore 'transfer_encoding' for the error message below.
+					memcpy(p, chunked, sizeof(chunked) - 1);
+
 					fprintf(stderr, "[error] Server has requested transfer encoding \"%s\", we can't use that. Only 'chunked' transfer encoding is supported.\n", transfer_encoding);
 					exit(1);
 				}
@@ -639,9 +690,9 @@ test_another_dup:
 
 	SPENT();
 
-	/* Читаем тело документа. Замечание: часть тела документа нами уже прочитана (и находится в line) */
-	const char *filename = "http.out";
-	int fout = open(filename, O_WRONLY | O_CREAT); // записываем результат в этот файл
+	/* Read the response body. Note: part of it has already been read into "line" */
+	const char *filename = "http.out"; // write response into this file
+	int fout = open(filename, O_WRONLY | O_CREAT);
 	if(fout < 0)
 	{
 		fprintf(stderr, "[error] open(\"%s\") failed: %s\n", filename, strerror(errno));
@@ -656,7 +707,7 @@ test_another_dup:
 
 	fprintf(stderr, "[info] Reading response body...\n");
 
-	/* Возвращаем сокет обратно в блокирующий режим */
+	/* Put the socket back into the blocking mode */
 	if(fcntl(sock, F_SETFL, 0) < 0)
 	{
 		fprintf(stderr, "[error] fcntl() failed: %s\n", strerror(errno));
@@ -682,7 +733,7 @@ test_another_dup:
 		}
 
 		len -= prefetched_bytes_needed;
-		if(len == 0) // Дочитали.
+		if(len == 0) // Everything read OK.
 			goto close_file;
 
 		size_t left = sendfile_from_socket(fout, sock, len);
@@ -692,22 +743,30 @@ test_another_dup:
 	}
 	else
 	{
-		/* chunked-метод.
-			Тут мешает кусок из line, который пришлось бы обрабатывать по-другому, нежели читаемое из сокета.
-			Поэтому сделаем так: читать будем в buffer[], а line переместим к его началу.
+		/* chunked method.
+			For convenience we're moving the text which exists in
+			"line" into the beginning of "buffer" (otherwise we'd
+			have two different versions of code - for "line"
+			and for "buffer").
 		*/
 		memmove(buffer, line, prefetched_body_length);
 		buffer[prefetched_body_length] = '\0';
 
-		buffer_offset = buffer + prefetched_body_length; // указывает на конец прочитанного
+		buffer_offset = buffer + prefetched_body_length; // points to the end of what we have read
 
 		char *start;
 get_next_chunk:
-		start = strip_first_CRLF(buffer); /* Во избежание ситуации, когда в buffer[] находятся всего один-два символа, и это CRLF (вызов separate_CRLF не понял бы подвоха и вернул бы корректный указатель) */
-		p1 = separate_CRLF(start); /* указывает на начало следующего chunk */
+		/* If buffer[] has only 1-2 symbols and they are CRLF,
+			separate_CRLF() would return a correct pointer (to the
+			string ""). We use strip_first_CRLF() to avoid that */
+		start = strip_first_CRLF(buffer);
+		p1 = separate_CRLF(start); /* points to the beginning of the next chunk */
 
-		if(!p1) // имеем неполную строку (она должна содержать длину куска и перевод строки в конце). Её надо дочитать
+		if(!p1)
 		{
+			// We've got an incomplete string (it must have length
+			// and newline symbol in the end). Continue reading it.
+
 			ssize_t ret = read(sock, buffer_offset, sizeof(buffer) - 1 - (buffer_offset - buffer));
 			if(ret < 0)
 			{
@@ -715,8 +774,11 @@ get_next_chunk:
 				exit(1);
 			}
 
-			if(ret == 0) // Сюда же попадём, если мы так и не встретили перевода строки (зачитали весь buffer, а его там нет). Это неверный chunked со стороны сервера
+			if(ret == 0)
 			{
+				// We just read the entire buffer[], but haven't found any newlines.
+				// This is an incorrect chunked from the server.
+
 response_ended_prematurely:
 				fprintf(stderr, "[warn] Response has ended prematurely (while waiting for another chunk). It might be incomplete\n");
 				goto close_file;
@@ -743,20 +805,23 @@ response_ended_prematurely:
 
 		fprintf(stderr, "[debug] Chunk length: %lu\n", chunk_len);
 
-		/* Возможно два варианта: 1. кусок находится полностью внутри buffer (уже зачитан), 2. кусок длиннее */
-
+		/*
+			Either the chunk is completely within buffer
+			(already read), or the chunk is longer
+		*/
 		if(buffer_offset - p1 > chunk_len)
 		{
-			/* FIXME: этот кусок не протестирован */
+			/* FIXME: this part of code wasn't really tested */
 
-			/* Кусок полностью внутри buffer. Просто записываем его в файл. */
+			/* The chunk is completely within the buffer.
+				Just write it into the file. */
 			if(write(fout, p1, chunk_len) < chunk_len)
 			{
 				fprintf(stderr, "write() failed: %s\n", strerror(errno));
 				exit(1);
 			}
 
-			/* Перемещаем остаток в начало buffer[] */
+			/* Move the rest into the beginning of buffer[] */
 			int newlen = buffer_offset - p1 - chunk_len;
 			memmove(buffer, p1 + chunk_len, newlen);
 			buffer[newlen] = '\0';
@@ -766,7 +831,7 @@ response_ended_prematurely:
 		}
 		else
 		{
-			/* Записываем то, что у нас уже есть */
+			/* Write what we already have */
 
 			size_t todo = buffer_offset - p1;
 			if(write(fout, p1, todo) < todo)
@@ -778,7 +843,7 @@ response_ended_prematurely:
 
 			//fprintf(stderr, "p1[%i]:\n-------------\n%s\n-------------\n\n", todo, p1);
 
-			/* читаем в начало buffer[] */
+			/* Read into the beginning of buffer[] */
 
 			while(chunk_len)
 			{
@@ -807,7 +872,8 @@ response_ended_prematurely:
 
 			if(chunk_len > 0) goto response_ended_prematurely;
 
-			/* А дальше у нас идёт следующий chunk. При этом buffer[] пуст (мы не читали более, чем нужно) */
+			/* Go to the next chunk. Here buffer[] is completely
+				blank (we didn't read more than we needed) */
 			buffer[0] = '\0';
 			buffer_offset = buffer;
 			goto get_next_chunk;
@@ -815,7 +881,7 @@ response_ended_prematurely:
 	}
 
 close_file:
-	alarm(0); /* Отключаем таймаут */
+	alarm(0); /* Disable the timeout */
 	SPENT();
 	fprintf(stderr, "[notice] File received (saved to %s)\n", filename);
 
