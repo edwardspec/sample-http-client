@@ -692,7 +692,7 @@ test_another_dup:
 
 	/* Read the response body. Note: part of it has already been read into "line" */
 	const char *filename = "http.out"; // write response into this file
-	int fout = open(filename, O_WRONLY | O_CREAT);
+	int fout = open(filename, O_WRONLY | O_CREAT, 0600);
 	if(fout < 0)
 	{
 		fprintf(stderr, "[error] open(\"%s\") failed: %s\n", filename, strerror(errno));
