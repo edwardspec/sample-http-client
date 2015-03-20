@@ -418,7 +418,7 @@ check_buffer_for_newlines:
 			char proto[10];
 			char status[256];
 
-			sscanf(line, "%9s %3hu %255s", proto, &code, status);
+			sscanf(line, "%9s %3hu %255[^\n]", proto, &code, status);
 
 			/* Catch the "wrong" status codes */
 			if(code >= 400)
