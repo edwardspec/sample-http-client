@@ -1,6 +1,6 @@
 /*
 	Basic http client.
-	Copyright (C) 2013 Edward Chernenko.
+	Copyright (C) 2013-2015 Edward Chernenko.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -154,12 +154,12 @@ size_t sendfile_from_socket(int out_fd, int in_fd, size_t count)
 {
 #define READ_BUFFER_SIZE 4096
 	char buffer[READ_BUFFER_SIZE];
-	size_t todo;
-	ssize_t bytes;
-	ssize_t written;
 
 	while(count)
 	{
+		size_t todo;
+		ssize_t bytes, written;
+
 		todo = count > READ_BUFFER_SIZE ? READ_BUFFER_SIZE : count;
 		bytes = read(in_fd, buffer, todo);
 
@@ -214,7 +214,7 @@ bad_schema:
 		{
 			if(begin[4] == 's' && begin[5] == '\0')
 			{
-				fprintf(stderr, "[error] HTTPS is not yet implemented.\n", begin);
+				fprintf(stderr, "[error] HTTPS is not yet implemented.\n");
 				exit(ENOSYS);
 			}
 			else goto bad_schema;
@@ -417,7 +417,8 @@ check_buffer_for_newlines:
 		{
 			char proto[10];
 			char status[256];
-			sscanf(line, "%9s %i %255s", proto, &code, status);
+
+			sscanf(line, "%9s %3hu %255s", proto, &code, status);
 
 			/* Catch the "wrong" status codes */
 			if(code >= 400)
@@ -597,7 +598,7 @@ test_another_dup:
 
 		if(++ redirect_nr > max_redirects)
 		{
-			fprintf(stderr, "[error] Redirects depth limit reached: maximum %i are allowed\n", max_redirects);
+			fprintf(stderr, "[error] Redirects depth limit reached: maximum %u are allowed\n", max_redirects);
 			exit(1);
 		}
 
@@ -803,7 +804,7 @@ response_ended_prematurely:
 			goto close_file;
 		}
 
-		fprintf(stderr, "[debug] Chunk length: %lu\n", chunk_len);
+		fprintf(stderr, "[debug] Chunk length: %zu\n", chunk_len);
 
 		/*
 			Either the chunk is completely within buffer
