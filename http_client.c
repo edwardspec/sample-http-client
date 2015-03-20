@@ -893,7 +893,7 @@ close_file:
 		exit(1);
 	}
 
-	fprintf(stderr, "[info] %s is %i bytes long\n", filename, st.st_size);
+	fprintf(stderr, "[info] %s is %li bytes long\n", filename, st.st_size);
 
 	if(close(fout) < 0)
 	{
