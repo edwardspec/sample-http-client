@@ -92,34 +92,20 @@ void timeout_handler(int unused)
 */
 char *separate_CRLF(char *string)
 {
-	char *p1, *p2;
-	p1 = strchr(string, '\n');
-	p2 = strchr(string, '\r');
+	char *p = strpbrk(string, "\r\n");
+	if(!p)
+		return NULL;
+		
+	char c = *p;
+	*p = '\0'; // mark the end of the string
 
-	if(!p1 && !p2) return NULL;
+	p ++;
+	
+	// if \r is followed by \n (or vice versa), then ignore the second symbol
+	if((c == '\n' && *p == '\r') || (c == '\r' && *p == '\n'))
+		p ++;
 
-	/* Switch "p1" and "p2", so that "p1" would be closer to the beginning
-		of the string (and so that "p1" wouldn't be NULL).
-		"p2" can be NULL */
-	if(!p1)
-	{
-		p1 = p2;
-		p2 = NULL;
-	}
-	else if(p2 && p1 > p2)
-	{
-		char *t = p1;
-		p1 = p2;
-		p2 = t;
-	}
-
-	*p1 = '\0'; // mark the end of the string
-
-	p1 ++;
-	if(p1 == p2) // if \r is followed by \n (or vice verse), then ignore the second symbol
-		p1 ++;
-
-	return p1;
+	return p;
 }
 
 /* If "string" starts with CRLF, returns a pointer to whatever is after CRLF.
