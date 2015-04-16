@@ -133,7 +133,7 @@ char *strip_first_CRLF(char *string)
 	Helper method to read the response body.
 	Unlike in the usual sendfile(), "in_fd" here can be a socket.
 
-	Return the number of NOT YET READ bytes (i.e. 0 if "count" bytes
+	Returns the number of NOT YET READ bytes (i.e. 0 if "count" bytes
 	have been read completely).
 */
 size_t sendfile_from_socket(int out_fd, int in_fd, size_t count)
@@ -215,7 +215,7 @@ bad_schema:
 	}
 
 
-	begin = p; // "being" points to the beginning of "example.com/some/path"
+	begin = p; // "begin" points to the beginning of "example.com/some/path"
 	p = strchr(begin, '/'); // separate the host
 	*p = '\0';
 
