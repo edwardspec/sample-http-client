@@ -95,12 +95,12 @@ char *separate_CRLF(char *string)
 	char *p = strpbrk(string, "\r\n");
 	if(!p)
 		return NULL;
-		
+
 	char c = *p;
 	*p = '\0'; // mark the end of the string
 
 	p ++;
-	
+
 	// if \r is followed by \n (or vice versa), then ignore the second symbol
 	if((c == '\n' && *p == '\r') || (c == '\r' && *p == '\n'))
 		p ++;
@@ -287,11 +287,11 @@ bad_schema:
 
 	char *request;
 	int request_length = asprintf(&request,
-		"GET /%s HTTP/1.1\n"
-		"Host: %s\n"
-		"Connection: close\n"
-		"User-Agent: %s/%s\n"
-		"\n", path, host, appname, appversion);
+		"GET /%s HTTP/1.1\r\n"
+		"Host: %s\r\n"
+		"Connection: close\r\n"
+		"User-Agent: %s/%s\r\n"
+		"\r\n", path, host, appname, appversion);
 	if(request_length < 0)
 	{
 		fprintf(stderr, "[error] asprintf: memory allocation failed\n");
@@ -299,6 +299,7 @@ bad_schema:
 	}
 
 	fprintf(stderr, "[info] Sending request to server...\n");
+	fprintf(stderr, "[debug] Contents of HTTP request: [%s]\n", request);
 
 	write(sock, request, request_length);
 	free(request);
