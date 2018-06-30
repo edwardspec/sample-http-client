@@ -1,0 +1,5 @@
+*.o
+http_client
+
+# Output file of http_client
+http.out
