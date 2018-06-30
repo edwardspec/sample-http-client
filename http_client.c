@@ -42,7 +42,7 @@ struct http_header {
 
 	int val_must_be_freed; // 0 if 'val' points to a static buffer, 1 if it was malloc()-ed
 };
-int redirect_nr = 0;
+unsigned redirect_nr = 0;
 
 void free_headers(struct http_header *HEADERS, int HEADERS_count)
 {
@@ -345,7 +345,7 @@ bad_schema:
 	// Number of bytes of HTTP response body which we read prematurely
 	// (while reading HTTP headers). "line" pointer will point
 	// to the first byte of this data.
-	int prefetched_body_length;
+	unsigned int prefetched_body_length;
 	char *p1;
 
 	while(1)
@@ -783,7 +783,7 @@ response_ended_prematurely:
 		}
 
 		errno = 0;
-		size_t chunk_len = strtol(start, 0, 16);
+		ssize_t chunk_len = strtol(start, 0, 16);
 		if(errno)
 		{
 			fprintf(stderr, "[error] Malformed chunk length: not a number.\n");
@@ -825,7 +825,7 @@ response_ended_prematurely:
 		{
 			/* Write what we already have */
 
-			size_t todo = buffer_offset - p1;
+			ssize_t todo = buffer_offset - p1;
 			if(write(fout, p1, todo) < todo)
 			{
 				fprintf(stderr, "write() failed: %s\n", strerror(errno));
