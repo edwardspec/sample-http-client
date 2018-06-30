@@ -1,3 +1,5 @@
+CFLAGS += -W -Wall -Wextra
+
 all: http_client
 
 clean:

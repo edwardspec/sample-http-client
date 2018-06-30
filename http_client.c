@@ -1,6 +1,6 @@
 /*
 	Basic http client.
-	Copyright (C) 2013-2015 Edward Chernenko.
+	Copyright (C) 2013-2018 Edward Chernenko.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -13,6 +13,8 @@
 	GNU General Public License for more details.
 */
 
+#define _GNU_SOURCE
+
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,6 +26,8 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 const unsigned request_timeout = 60; // in seconds
 const unsigned max_redirects = 7;
@@ -77,7 +81,7 @@ void print_usage()
 	fprintf(stderr, "Usage: %s URL\n", appname);
 	exit(1);
 }
-void timeout_handler(int unused)
+void timeout_handler(int unused __attribute__((unused)))
 {
 	fprintf(stderr, "[error] Timeout\n");
 	exit(1);
