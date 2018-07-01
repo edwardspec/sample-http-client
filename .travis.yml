@@ -17,7 +17,7 @@ env:
 
 before_script:
   - make
-  - docker run -p 80:80 kennethreitz/httpbin
+  - docker run -d -p 80:80 kennethreitz/httpbin
 
 script:
   - make test
