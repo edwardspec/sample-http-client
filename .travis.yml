@@ -1,0 +1,19 @@
+dist: trusty
+sudo: false
+language: c
+
+git:
+  depth: 1
+
+notifications:
+  email: false
+
+env:
+  global:
+    - HTTPBIN_HOST=httpbin.org # FIXME: run locally
+
+before_script:
+  - make
+
+script:
+  - make test
