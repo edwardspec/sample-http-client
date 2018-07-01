@@ -221,10 +221,12 @@ bad_schema:
 
 	begin = p; // "begin" points to the beginning of "example.com/some/path"
 	p = strchr(begin, '/'); // separate the host
-	*p = '\0';
+	if(p) {
+		*p = '\0';
+	}
 
 	char *host = begin; // points to "example.com" or "example.com:1234"
-	char *path = p + 1; // points to "/some/path"
+	const char *path = p ? (p + 1) : "/"; // points to "/some/path"
 
 	// Convert the port from string to integer
 	p = strchr(host, ':');

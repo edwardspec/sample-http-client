@@ -4,6 +4,7 @@ HOST=${HTTPBIN_HOST:-'httpbin.org'}
 FAILURES=0
 
 function main {
+	runtest "" assert_rootpage
 	runtest /robots.txt assert_robots
 	runtest /redirect-to?url=http://$HOST/robots.txt assert_robots
 	runtest /absolute-redirect/7 assert_redirect_target
@@ -17,6 +18,10 @@ function main {
 
 	# Not implemented:
 	#runtest /relative-redirect/1 assert_redirect_target
+}
+
+function assert_rootpage {
+	grep -q DOCTYPE http.out || return 1
 }
 
 function assert_robots {
