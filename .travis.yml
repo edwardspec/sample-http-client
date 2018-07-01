@@ -1,5 +1,5 @@
 dist: trusty
-sudo: false
+sudo: required
 language: c
 
 git:
@@ -8,12 +8,16 @@ git:
 notifications:
   email: false
 
+services:
+  - docker
+
 env:
   global:
-    - HTTPBIN_HOST=httpbin.org # FIXME: run locally
+    - HTTPBIN_HOST=127.0.0.1
 
 before_script:
   - make
+  - docker run -p 80:80 kennethreitz/httpbin
 
 script:
   - make test
