@@ -8,4 +8,5 @@ clean:
 http_client: http_client.o
 
 test: http_client
-	sh ./run_tests.sh
+	chmod +x ./run_tests.sh
+	./run_tests.sh

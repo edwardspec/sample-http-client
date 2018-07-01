@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 HOST=${HTTPBIN_HOST:-'httpbin.org'}
 FAILURES=0
