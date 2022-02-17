@@ -1,0 +1,20 @@
+name: Integration test
+
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  HTTPBIN_HOST: 127.0.0.1
+
+jobs:
+  httpbin-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install httpbin (HTTP test server)
+        run: docker run -d -p 80:80 kennethreitz/httpbin
+      - name: Wait for httpbin server to start accepting connections
+        run: |
+          sudo apt-get install -y netcat
+          ( while ! nc -z 127.0.0.1 80; do sleep 1; done )
+      - run: make
+      - run: make test

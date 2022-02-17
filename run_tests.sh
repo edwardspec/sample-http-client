@@ -30,7 +30,7 @@ function assert_robots {
 }
 
 function assert_user_agent {
-	echo '{"user-agent":"http_client/0.1"}' | cmp - http.out || return 1
+	grep -q '"user-agent": "http_client/0.1"' http.out || return 1
 }
 
 function assert_redirect_target {
@@ -63,11 +63,12 @@ function runtest {
 	$testFunction $retval
 
 	if [ $? -ne 0 ]; then
-		echo "run_tests: ERROR: request ${relativeUrl} produced unexpected result." >&2
+		echo "run_tests: ERROR: request \"${relativeUrl}\" produced unexpected result: <<<" >&2
+		( cat http.out; echo ">>>" ) >&2
 		(( FAILURES ++ ))
+	else
+		echo "run_tests: test passed: ${relativeUrl}" >&2
 	fi
-
-	echo "run_tests: test passed: ${relativeUrl}" >&2
 }
 
 main
